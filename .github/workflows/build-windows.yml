@@ -1,0 +1,50 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller customtkinter openpyxl pdfplumber python-docx
+
+      - name: Remove local customtkinter fallback
+        run: |
+          if (Test-Path "customtkinter.py") { Remove-Item "customtkinter.py" }
+        shell: pwsh
+
+      - name: Build EXE with PyInstaller
+        run: |
+          pyinstaller `
+            --onefile `
+            --windowed `
+            --name "ExcelAIExtractor" `
+            --hidden-import customtkinter `
+            --hidden-import openpyxl `
+            --hidden-import pdfplumber `
+            --hidden-import docx `
+            --collect-all customtkinter `
+            app.py
+        shell: pwsh
+
+      - name: Upload EXE as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ExcelAIExtractor-Windows
+          path: dist/ExcelAIExtractor.exe
+          retention-days: 30
